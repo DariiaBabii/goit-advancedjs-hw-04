@@ -51,6 +51,9 @@ button {
 button:enabled:hover {
   cursor: pointer;
 }
+button:disabled:hover {
+  cursor: not-allowed;
+}
 
 .main {
   padding: 1.5rem;

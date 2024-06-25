@@ -8,10 +8,17 @@ const searchInput = document.querySelector('input[name="searchQuery"]');
 const searchButton = document.querySelector('button[type="submit"]');
 
 searchForm.addEventListener('submit', onFormSubmit, false);
-searchInput.addEventListener('input', onSearchInput, false);
 loadMore.addEventListener('click', onLoadMore);
+searchInput.addEventListener('input', onSearchInput, false);
 
 let page = 1;
+let query = '';
+let isFirstSubmit = true;
+
+function onSearchInput() {
+  searchButton.disabled = searchInput.value.trim() === '';
+}
+searchButton.disabled = true;
 
 const lightbox = new SimpleLightbox('.gallery a', {});
 
@@ -19,8 +26,19 @@ async function onFormSubmit(event) {
   event.preventDefault();
   page = 1;
   gallery.innerHTML = '';
-  const query = searchInput.value;
   loadMore.style.display = 'none';
+  query = searchInput.value.trim();
+
+  if (query.length === 0) {
+    iziToast.error({
+      title: 'Error',
+      message: 'Please enter your request.',
+      position: 'topRight',
+    });
+    return;
+  }
+  isFirstSubmit = true;
+
   try {
     const response = await getImage(query, page);
     const { hits, totalHits } = response.data;
@@ -29,9 +47,11 @@ async function onFormSubmit(event) {
         title: 'Error',
         message:
           'Sorry, there are no images matching your search query. Please try again.',
+        position: 'topRight',
       });
       return;
     }
+
     renderGallery(hits);
     lightbox.refresh();
     iziToast.success({
@@ -39,11 +59,23 @@ async function onFormSubmit(event) {
       message: `Hooray! We found ${totalHits} images.`,
     });
     loadMore.style.display = 'block';
-    smoothScroll();
+    if (!isFirstSubmit) {
+      smoothScroll();
+    } else {
+      isFirstSubmit = false;
+    }
+    if (hits.length < 40) {
+      iziToast.info({
+        title: 'Info',
+        message: "We're sorry, but you've reached the end of search results.",
+      });
+      loadMore.style.display = 'none';
+    }
   } catch (error) {
     iziToast.error({
       title: 'Error',
       message: 'Failed to fetch images. Please try again later.',
+      position: 'topRight',
     });
     console.error(error);
   }
@@ -51,7 +83,7 @@ async function onFormSubmit(event) {
 
 async function onLoadMore() {
   page++;
-  const query = searchInput.value;
+  query = searchInput.value.trim();
   try {
     const response = await getImage(query, page);
     const { hits } = response.data;
@@ -69,6 +101,7 @@ async function onLoadMore() {
     iziToast.error({
       title: 'Error',
       message: 'Failed to load more images. Please try again later.',
+      position: 'topRight',
     });
     console.error('Error in onLoadMore:', error);
   }
@@ -83,8 +116,4 @@ function smoothScroll() {
     top: cardHeight * 2,
     behavior: 'smooth',
   });
-}
-
-function onSearchInput() {
-  searchButton.disabled = searchInput.value.trim() === '';
 }
